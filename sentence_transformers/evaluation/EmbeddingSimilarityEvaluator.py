@@ -29,7 +29,7 @@ class EmbeddingSimilarityEvaluator(SentenceEvaluator):
                  name: str = '',
                  show_progress_bar: bool = False,
                  write_csv: bool = True,
-                 callback: Callable[dict, None] = None):
+                 callback: Callable[[dict], None] = None):
         """
         Constructs an evaluator based for the dataset
 
