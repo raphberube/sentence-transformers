@@ -150,6 +150,6 @@ class EmbeddingSimilarityEvaluator(SentenceEvaluator):
         elif self.main_similarity == SimilarityFunction.DOT_PRODUCT:
             return eval_spearman_dot
         elif self.main_similarity is None:
-            return np.nanmax(np.array(eval_spearman_cosine, eval_spearman_manhattan, eval_spearman_euclidean, eval_spearman_dot))
+            return np.nanmax(np.array([eval_spearman_cosine, eval_spearman_manhattan, eval_spearman_euclidean, eval_spearman_dot]))
         else:
             raise ValueError("Unknown main_similarity value")
