@@ -131,6 +131,7 @@ class EmbeddingSimilarityEvaluator(SentenceEvaluator):
             self.callback({
                 'epoch': epoch,
                 'steps': steps,
+                'model': model,
                 'eval_pearson_cosine': eval_pearson_cosine,
                 'eval_spearman_cosine': eval_spearman_cosine,
                 'eval_pearson_euclidean': eval_pearson_euclidean,

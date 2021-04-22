@@ -384,6 +384,21 @@ class SentenceTransformer(nn.Sequential):
         with open(os.path.join(path, 'config.json'), 'w') as fOut:
             json.dump({'__version__': __version__}, fOut, indent=2)
 
+        try:
+            torch.save({
+                'epoch': self.__epoch,
+                'global_step': self.__global_step,
+                'training_step': self.__training_step,
+                'step': self.__step,
+                'best_score': self.best_score,
+                'model_state_dict': self.state_dict(),
+                'optimizer_state_dict': self.__optimizers[0].state_dict(),
+                'scheduler': self.__schedulers[0]
+                'loss': self.__loss_models,
+                }, PATH)
+        except Exception as ex:
+            logging.error(ex)
+
     def smart_batching_collate(self, batch):
         """
         Transforms a batch from a SmartBatchingDataset to a batch of tensors for the model
@@ -447,7 +462,8 @@ class SentenceTransformer(nn.Sequential):
             max_grad_norm: float = 1,
             use_amp: bool = False,
             callback: Callable[[float, int, int], None] = None,
-            show_progress_bar: bool = True
+            show_progress_bar: bool = True,
+            resume: bool = False
             ):
         """
         Train the model with the given training objective
@@ -519,6 +535,9 @@ class SentenceTransformer(nn.Sequential):
             optimizers.append(optimizer)
             schedulers.append(scheduler_obj)
 
+        self.__optimizers = optimizers
+        self.__schedulers = schedulers
+        self.__loss_models = loss_models
 
         global_step = 0
         data_iterators = [iter(dataloader) for dataloader in dataloaders]
@@ -529,11 +548,16 @@ class SentenceTransformer(nn.Sequential):
         for epoch in trange(epochs, desc="Epoch", disable=not show_progress_bar):
             training_steps = 0
 
+            self.__epoch = epoch
+
             for loss_model in loss_models:
                 loss_model.zero_grad()
                 loss_model.train()
 
             for _ in trange(steps_per_epoch, desc="Iteration", smoothing=0.05, disable=not show_progress_bar):
+                
+                self.__step = _
+                
                 for train_idx in range(num_train_objectives):
                     loss_model = loss_models[train_idx]
                     optimizer = optimizers[train_idx]
@@ -577,9 +601,12 @@ class SentenceTransformer(nn.Sequential):
                 training_steps += 1
                 global_step += 1
 
+                self.__global_step = global_step
+                self.__training_step = training_steps
+
                 if evaluation_steps > 0 and training_steps % evaluation_steps == 0:
                     self._eval_during_training(evaluator, output_path, save_best_model, epoch,
-                                               training_steps, callback)
+                                               global_step, callback)
                     for loss_model in loss_models:
                         loss_model.zero_grad()
                         loss_model.train()
@@ -605,9 +632,7 @@ class SentenceTransformer(nn.Sequential):
     def _eval_during_training(self, evaluator, output_path, save_best_model, epoch, steps, callback):
         """Runs evaluation during the training"""
         if evaluator is not None:
-            score = evaluator(self, output_path=output_path, epoch=epoch, steps=steps)
-            if callback is not None:
-                callback(score, epoch, steps)
+            score = evaluator(self, output_path=output_path, epoch=epoch, steps=steps, callback=callback)
             if score > self.best_score:
                 self.best_score = score
                 if save_best_model:
