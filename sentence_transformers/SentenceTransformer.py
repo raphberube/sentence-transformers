@@ -393,7 +393,7 @@ class SentenceTransformer(nn.Sequential):
                 'best_score': self.best_score,
                 'model_state_dict': self.state_dict(),
                 'optimizer_state_dict': self.__optimizers[0].state_dict(),
-                'scheduler': self.__schedulers[0]
+                'scheduler': self.__schedulers[0],
                 'loss': self.__loss_models,
                 }, PATH)
         except Exception as ex:
